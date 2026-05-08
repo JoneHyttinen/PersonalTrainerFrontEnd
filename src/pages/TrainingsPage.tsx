@@ -1,6 +1,6 @@
 import { useEffect, useState } from "react";
 import type { Training } from "../types/Training";
-import { getTrainings, getCustomerByLink } from "../api/Items";
+import { deleteTraining, getTrainings, getCustomerByLink } from "../api/Items";
 import dayjs from "dayjs";
 import {
   Table,
@@ -20,9 +20,7 @@ import {
   FormControl,
   OutlinedInput,
 } from "@mui/material";
-import DeleteIcon from "@mui/icons-material/Delete";
-import SearchIcon from "@mui/icons-material/Search";
-import ClearIcon from "@mui/icons-material/Clear";
+import { Delete, Search, Clear } from "@mui/icons-material";
 
 type SortColumn = "activity" | "date" | "duration" | "customerName";
 type SortDirection = "asc" | "desc";
@@ -39,7 +37,8 @@ export default function TrainingsPage() {
   const [sortDirection, setSortDirection] = useState<SortDirection>("asc");
   const [searchQuery, setSearchQuery] = useState("");
 
-  useEffect(() => {
+  const loadTrainings = () => {
+    setLoading(true);
     getTrainings()
       .then(async (data) => {
         const trainingsWithCustomers = await Promise.all(
@@ -62,7 +61,68 @@ export default function TrainingsPage() {
         setError("Error fetching trainings");
       })
       .finally(() => setLoading(false));
+  };
+
+  useEffect(() => {
+    let active = true;
+
+    getTrainings()
+      .then(async (data) => {
+        const trainingsWithCustomers = await Promise.all(
+          data.map(async (training) => {
+            const customer = await getCustomerByLink(
+              training._links.customer.href,
+            );
+            return {
+              ...training,
+              customerName: customer
+                ? `${customer.firstname} ${customer.lastname}`
+                : "Unknown",
+            };
+          }),
+        );
+        if (!active) {
+          return;
+        }
+        setTrainings(trainingsWithCustomers);
+        setError(null);
+      })
+      .catch((error) => {
+        if (!active) {
+          return;
+        }
+        console.error("Error fetching trainings:", error);
+        setError("Error fetching trainings");
+      })
+      .finally(() => {
+        if (!active) {
+          return;
+        }
+        setLoading(false);
+      });
+
+    return () => {
+      active = false;
+    };
   }, []);
+
+  const handleDeleteTraining = async (training: TrainingWithCustomer) => {
+    const shouldDelete = window.confirm(
+      `Delete training ${training.activity} on ${dayjs(training.date).format("DD.MM.YYYY HH:mm")}?`,
+    );
+
+    if (!shouldDelete) {
+      return;
+    }
+
+    try {
+      await deleteTraining(training._links.self.href);
+      loadTrainings();
+    } catch (error) {
+      console.error("Error deleting training:", error);
+      setError("Error deleting training");
+    }
+  };
 
   const handleSort = (column: SortColumn) => {
     if (sortColumn === column) {
@@ -142,7 +202,7 @@ export default function TrainingsPage() {
             onChange={(e) => setSearchQuery(e.target.value)}
             startAdornment={
               <InputAdornment position="start">
-                <SearchIcon />
+                <Search />
               </InputAdornment>
             }
             endAdornment={
@@ -153,7 +213,7 @@ export default function TrainingsPage() {
                     onClick={() => setSearchQuery("")}
                     aria-label="Clear search"
                   >
-                    <ClearIcon fontSize="small" />
+                    <Clear fontSize="small" />
                   </IconButton>
                 </InputAdornment>
               ) : undefined
@@ -227,8 +287,9 @@ export default function TrainingsPage() {
                   <IconButton
                     color="error"
                     aria-label={`Delete training ${training.activity} on ${training.date}`}
+                    onClick={() => handleDeleteTraining(training)}
                   >
-                    <DeleteIcon />
+                    <Delete />
                   </IconButton>
                 </TableCell>
                 <TableCell>{training.activity}</TableCell>

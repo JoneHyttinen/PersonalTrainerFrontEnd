@@ -1,6 +1,9 @@
 import { useEffect, useState } from "react";
 import type { Customer } from "../types/Customer";
-import { getCustomers } from "../api/Items";
+import { deleteCustomer, getCustomers } from "../api/Items";
+import AddCustomer from "../Components/AddCustomer";
+import AddTraining from "../Components/AddTraining";
+import EditCustomer from "../Components/EditCustomer";
 import {
   IconButton,
   Table,
@@ -12,11 +15,14 @@ import {
   TableContainer,
   TableSortLabel,
 } from "@mui/material";
-import { Box, Typography, InputAdornment, FormControl, OutlinedInput } from "@mui/material";
-import EditIcon from "@mui/icons-material/Edit";
-import DeleteIcon from "@mui/icons-material/Delete";
-import SearchIcon from "@mui/icons-material/Search";
-import ClearIcon from "@mui/icons-material/Clear";
+import {
+  Box,
+  Typography,
+  InputAdornment,
+  FormControl,
+  OutlinedInput,
+} from "@mui/material";
+import { Delete, Search, Clear } from "@mui/icons-material";
 
 type SortColumn =
   | "firstname"
@@ -36,15 +42,67 @@ export default function CustomerPage() {
   const [sortDirection, setSortDirection] = useState<SortDirection>("asc");
   const [searchQuery, setSearchQuery] = useState("");
 
+  const handleDeleteCustomer = async (customer: Customer) => {
+    const shouldDelete = window.confirm(
+      `Delete ${customer.firstname} ${customer.lastname}?`,
+    );
+
+    if (!shouldDelete) {
+      return;
+    }
+
+    try {
+      await deleteCustomer(customer._links.self.href);
+      loadCustomers();
+    } catch (error) {
+      console.error("Error deleting customer:", error);
+      setError("Error deleting customer");
+    }
+  };
+
   useEffect(() => {
+    let active = true;
+
     getCustomers()
-      .then((data) => setCustomers(data))
+      .then((data) => {
+        if (!active) {
+          return;
+        }
+        setCustomers(data);
+        setError(null);
+      })
+      .catch((error) => {
+        if (!active) {
+          return;
+        }
+        console.error("Error fetching customers:", error);
+        setError("Error fetching customers");
+      })
+      .finally(() => {
+        if (!active) {
+          return;
+        }
+        setLoading(false);
+      });
+
+    return () => {
+      active = false;
+    };
+  }, []);
+
+  const loadCustomers = () => {
+    setLoading(true);
+    getCustomers()
+      .then((data) => {
+        setCustomers(data);
+        setError(null);
+      })
       .catch((error) => {
         console.error("Error fetching customers:", error);
         setError("Error fetching customers");
       })
       .finally(() => setLoading(false));
-  }, []);
+  };
 
   const handleSort = (column: SortColumn) => {
     if (sortColumn === column) {
@@ -113,48 +171,65 @@ export default function CustomerPage() {
   }
 
   return (
-    <Box sx={{ width: "100%" }}>
-      <Box sx={{ display: "flex", alignItems: "center", justifyContent: "space-between", mb: 2 }}>
-        <Typography variant="h5" component="h2">
+    <Box sx={{ width: "100%", maxWidth: "100%" }}>
+      <Box
+        sx={{
+          display: "flex",
+          alignItems: "center",
+          justifyContent: "space-between",
+          mb: 2,
+        }}
+      >
+        <Typography variant="h5" component="h2" color="">
           Customers
         </Typography>
 
-        <FormControl sx={{ width: 360, backgroundColor: "white", borderRadius: 1 }} variant="outlined">
-          <OutlinedInput
-            size="small"
-            value={searchQuery}
-            onChange={(e) => setSearchQuery(e.target.value)}
-            startAdornment={
-              <InputAdornment position="start">
-                <SearchIcon />
-              </InputAdornment>
-            }
-            endAdornment={
-              searchQuery ? (
-                <InputAdornment position="end">
-                  <IconButton size="small" onClick={() => setSearchQuery("")} aria-label="Clear search">
-                    <ClearIcon fontSize="small" />
-                  </IconButton>
+        <Box sx={{ display: "flex", alignItems: "center", gap: 1 }}>
+          <FormControl
+            sx={{ width: 360, backgroundColor: "white", borderRadius: 1 }}
+            variant="outlined"
+          >
+            <OutlinedInput
+              size="small"
+              value={searchQuery}
+              onChange={(e) => setSearchQuery(e.target.value)}
+              startAdornment={
+                <InputAdornment position="start">
+                  <Search />
                 </InputAdornment>
-              ) : undefined
-            }
-            placeholder="Search"
-            aria-label="search"
-          />
-        </FormControl>
+              }
+              endAdornment={
+                searchQuery ? (
+                  <InputAdornment position="end">
+                    <IconButton
+                      size="small"
+                      onClick={() => setSearchQuery("")}
+                      aria-label="Clear search"
+                    >
+                      <Clear fontSize="small" />
+                    </IconButton>
+                  </InputAdornment>
+                ) : undefined
+              }
+              placeholder="Search"
+              aria-label="search"
+            />
+          </FormControl>
+          <AddCustomer onCustomerAdded={loadCustomers} />
+        </Box>
       </Box>
       <TableContainer
         component={Paper}
         sx={{
           width: "100%",
           height: "100%",
-          overflowX: "auto",
         }}
       >
         <Table
           size="medium"
           sx={{
-            minWidth: 1200,
+            width: "100%",
+            tableLayout: "auto",
           }}
         >
           <TableHead>
@@ -231,18 +306,31 @@ export default function CustomerPage() {
             {getSortedCustomers().map((customer) => (
               <TableRow key={customer._links.self.href}>
                 <TableCell align="center">
-                  <IconButton
-                    color="error"
-                    aria-label={`Delete ${customer.firstname} ${customer.lastname}`}
+                  <Box
+                    sx={{
+                      display: "flex",
+                      alignItems: "center",
+                      justifyContent: "center",
+                      gap: 0.5,
+                      flexWrap: "nowrap",
+                    }}
                   >
-                    <DeleteIcon />
-                  </IconButton>
-                  <IconButton
-                    color="primary"
-                    aria-label={`Edit ${customer.firstname} ${customer.lastname}`}
-                  >
-                    <EditIcon />
-                  </IconButton>
+                    <IconButton
+                      color="error"
+                      aria-label={`Delete ${customer.firstname} ${customer.lastname}`}
+                      onClick={() => handleDeleteCustomer(customer)}
+                    >
+                      <Delete />
+                    </IconButton>
+                    <EditCustomer
+                      customer={customer}
+                      onCustomerUpdated={loadCustomers}
+                    />
+                    <AddTraining
+                      customer={customer}
+                      onTrainingAdded={loadCustomers}
+                    />
+                  </Box>
                 </TableCell>
                 <TableCell>{customer.firstname}</TableCell>
                 <TableCell>{customer.lastname}</TableCell>
