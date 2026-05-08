@@ -15,6 +15,7 @@ import {
 import MenuIcon from "@mui/icons-material/Menu";
 import GroupOutlinedIcon from "@mui/icons-material/GroupOutlined";
 import FitnessCenterOutlinedIcon from "@mui/icons-material/FitnessCenterOutlined";
+import CalendarMonthIcon from "@mui/icons-material/CalendarMonth";
 import "./App.css";
 
 const drawerWidth = 260;
@@ -29,6 +30,11 @@ const navItems = [
     label: "Trainings",
     path: "/trainings",
     icon: <FitnessCenterOutlinedIcon />,
+  },
+  {
+    label: "Calendar",
+    path: "/calendar",
+    icon: <CalendarMonthIcon />,
   },
 ];
 
