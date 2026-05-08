@@ -7,26 +7,29 @@ import CustomerPage from "./pages/CustomerPage.tsx";
 import TrainingsPage from "./pages/TrainingsPage.tsx";
 import CalendarPage from "./pages/CalendarPage.tsx";
 
-const router = createBrowserRouter([
-  {
-    path: "/",
-    element: <App />,
-    children: [
-      {
-        index: true,
-        element: <CustomerPage />,
-      },
-      {
-        path: "trainings",
-        element: <TrainingsPage />,
-      },
-      {
-        path: "calendar",
-        element: <CalendarPage />,
-      },
-    ],
-  },
-]);
+const router = createBrowserRouter(
+  [
+    {
+      path: "/",
+      element: <App />,
+      children: [
+        {
+          index: true,
+          element: <CustomerPage />,
+        },
+        {
+          path: "trainings",
+          element: <TrainingsPage />,
+        },
+        {
+          path: "calendar",
+          element: <CalendarPage />,
+        },
+      ],
+    },
+  ],
+  { basename: "/PersonalTrainerFrontEnd" },
+);
 
 createRoot(document.getElementById("root")!).render(
   <StrictMode>
