@@ -4,6 +4,7 @@ import { deleteCustomer, getCustomers } from "../api/Items";
 import AddCustomer from "../Components/AddCustomer";
 import AddTraining from "../Components/AddTraining";
 import EditCustomer from "../Components/EditCustomer";
+import { exportCustomersToCSV } from "../utils/exportToCSV";
 import {
   IconButton,
   Table,
@@ -14,6 +15,7 @@ import {
   Paper,
   TableContainer,
   TableSortLabel,
+  Button,
 } from "@mui/material";
 import {
   Box,
@@ -22,7 +24,7 @@ import {
   FormControl,
   OutlinedInput,
 } from "@mui/material";
-import { Delete, Search, Clear } from "@mui/icons-material";
+import { Delete, Search, Clear, FileDownload } from "@mui/icons-material";
 
 type SortColumn =
   | "firstname"
@@ -215,6 +217,14 @@ export default function CustomerPage() {
               aria-label="search"
             />
           </FormControl>
+          <Button
+            variant="contained"
+            startIcon={<FileDownload />}
+            onClick={() => exportCustomersToCSV(getSortedCustomers())}
+            size="small"
+          >
+            Export
+          </Button>
           <AddCustomer onCustomerAdded={loadCustomers} />
         </Box>
       </Box>
